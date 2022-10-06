@@ -1,0 +1,5 @@
+.vscode
+*.tsv
+copy.sh
+bundle*.js
+index.html
