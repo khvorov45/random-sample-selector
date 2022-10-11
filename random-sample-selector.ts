@@ -89,15 +89,12 @@ const main = () => {
 			getKey: (row, group) => row[group],
 			addRow: (row, count) => count.push(row),
 		})
-		console.log(dataGroups)
 
 		const select = (from: any) => {
 			if (Array.isArray(from)) {
 				const selectCount = howManyInput.value === "" ? 0 : <number>(<unknown>howManyInput.value)
 				const allIndices = Arr.seq(0, from.length, 1)
-				console.log(allIndices)
 				const selectedIndices = Arr.sample(allIndices, selectCount)
-				console.log("sel:", selectedIndices)
 				for (let rowIndex = 0; rowIndex < from.length; rowIndex++) {
 					const row = from[rowIndex]
 					if (selectedIndices.includes(rowIndex)) {
