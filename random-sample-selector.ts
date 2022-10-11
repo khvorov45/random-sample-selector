@@ -37,13 +37,14 @@ const parseData = (input: string): Data => {
 }
 
 const main = () => {
-	FileInput.createWholePageFileInput((event) => {
+	const fileInputHandler = (event: Event) => {
 		const el = <HTMLInputElement>event.target
 		const file = el.files?.[0]
 		if (file !== null && file !== undefined) {
 			file.text().then(onNewDataString)
 		}
-	})
+	}
+	FileInput.createWholePageFileInput(fileInputHandler)
 
 	let data: Data = { colnames: [], data: [] }
 	const keepAll: Record<string, string[]> = {}
@@ -205,6 +206,20 @@ const main = () => {
 	filePromptContainer.style.fontSize = "xx-large"
 
 	DOM.addEl(filePromptContainer, DOM.createDivWithText("Drag file"))
+
+	const fileInputWholePageClick = DOM.addEl(filePromptContainer, DOM.createEl("input"))
+	fileInputWholePageClick.type = "file"
+	fileInputWholePageClick.addEventListener("change", fileInputHandler)
+	fileInputWholePageClick.style.position = "fixed"
+	fileInputWholePageClick.style.top = "0"
+	fileInputWholePageClick.style.left = "0"
+	fileInputWholePageClick.style.width = "100vw"
+	fileInputWholePageClick.style.height = "100vh"
+	fileInputWholePageClick.style.opacity = "0"
+	fileInputWholePageClick.style.visibility = "visible"
+	fileInputWholePageClick.style.zIndex = "999"
+	fileInputWholePageClick.style.background = "gray"
+	fileInputWholePageClick.style.cursor = "pointer"
 
 	if (globalThis.window.location.hostname == "127.0.0.1") {
 		const fetchAndUpdate = async (path: string) => {
