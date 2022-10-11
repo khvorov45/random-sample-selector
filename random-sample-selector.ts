@@ -46,6 +46,7 @@ const main = () => {
 	})
 
 	let data: Data = { colnames: [], data: [] }
+	const keepAll: Record<string, string[]> = {}
 	const groupBy: string[] = []
 
 	const onNewDataString = (input: string) => {
@@ -54,6 +55,32 @@ const main = () => {
 	}
 
 	const regenTableAndFilterInputs = () => {
+		const switchColors = {
+			normal: "var(--color-background)",
+			hover: "var(--color-background2)",
+			selected: "var(--color-selected)",
+		}
+
+		DOM.removeChildren(keepAllSwitchesContainer)
+		for (const colname of data.colnames) {
+			if (colname !== "_SEL_") {
+				if (keepAll[colname] === undefined) {
+					keepAll[colname] = []
+				}
+				DOM.addEl(
+					keepAllSwitchesContainer,
+					DOM.createSwitch({
+						type: "toggleMany",
+						state: keepAll[colname],
+						opts: Arr.unique(data.data.map((x) => x[colname])),
+						name: colname,
+						colors: switchColors,
+						onUpdate: reselectData,
+					})
+				)
+			}
+		}
+
 		DOM.removeChildren(groupBySwitchContainer)
 		DOM.addEl(
 			groupBySwitchContainer,
@@ -62,11 +89,7 @@ const main = () => {
 				state: groupBy,
 				opts: data.colnames.filter((x) => x !== "_SEL_"),
 				name: "groupBy",
-				colors: {
-					normal: "var(--color-background)",
-					hover: "var(--color-background2)",
-					selected: "var(--color-selected)",
-				},
+				colors: switchColors,
 				onUpdate: reselectData,
 				initOpen: true,
 			})
@@ -78,7 +101,6 @@ const main = () => {
 	const reselectData = () => {
 		for (const groupCol of groupBy) {
 			data.colnames = Arr.moveToFront(data.colnames, groupCol)
-			// data.data = data.data.sort((x, y) => (x[groupCol] > y[groupCol] ? 1 : x[groupCol] < y[groupCol] ? -1 : 0))
 		}
 		data.colnames = Arr.moveToFront(data.colnames, "_SEL_")
 
@@ -92,16 +114,32 @@ const main = () => {
 
 		const select = (from: any) => {
 			if (Array.isArray(from)) {
-				const selectCount = howManyInput.value === "" ? 0 : <number>(<unknown>howManyInput.value)
-				const allIndices = Arr.seq(0, from.length, 1)
-				const selectedIndices = Arr.sample(allIndices, selectCount)
+				const notKept = <DataRow[]>[]
 				for (let rowIndex = 0; rowIndex < from.length; rowIndex++) {
 					const row = from[rowIndex]
-					if (selectedIndices.includes(rowIndex)) {
-						row._SEL_ = "1"
-					} else {
-						row._SEL_ = "0"
+					let keepBecauseOfKeepAll = false
+					for (const colname of data.colnames) {
+						if (colname !== "_SEL_") {
+							keepBecauseOfKeepAll = keepBecauseOfKeepAll || keepAll[colname].includes(row[colname])
+							if (keepBecauseOfKeepAll) {
+								break
+							}
+						}
 					}
+					if (keepBecauseOfKeepAll) {
+						row._SEL_ = "1"
+						data.data.push(row)
+					} else {
+						notKept.push(row)
+					}
+				}
+
+				const selectCount = howManyInput.value === "" ? 0 : <number>(<unknown>howManyInput.value)
+				const allIndices = Arr.seq(0, notKept.length, 1)
+				const selectedIndices = Arr.sample(allIndices, selectCount)
+				for (let rowIndex = 0; rowIndex < notKept.length; rowIndex++) {
+					const row = notKept[rowIndex]
+					row._SEL_ = selectedIndices.includes(rowIndex) ? "1" : "0"
 					data.data.push(row)
 				}
 			} else {
@@ -145,6 +183,9 @@ const main = () => {
 	const tableContainer = DOM.addDiv(mainEl)
 	const settingsContainer = DOM.addDiv(mainEl)
 	settingsContainer.style.display = "flex"
+	const keepAllContainer = DOM.addDiv(settingsContainer)
+	DOM.addEl(keepAllContainer, DOM.createDivWithText("keepAll"))
+	const keepAllSwitchesContainer = DOM.addDiv(keepAllContainer)
 	const groupBySwitchContainer = DOM.addDiv(settingsContainer)
 	const howManyEl = DOM.addDiv(settingsContainer)
 	howManyEl.style.display = "flex"
