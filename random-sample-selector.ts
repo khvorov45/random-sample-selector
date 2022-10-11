@@ -75,7 +75,7 @@ const main = () => {
 					DOM.createSwitch({
 						type: "toggleMany",
 						state: keepAll[colname],
-						opts: Arr.unique(data.data.map((x) => x[colname])),
+						opts: Arr.unique(data.data.map((x) => x[colname])).sort(Arr.generalSort),
 						name: colname,
 						colors: switchColors,
 						onUpdate: reselectData,
