@@ -238,27 +238,21 @@ export const createTableFromAos = <RowType extends { [key: string]: any }>({
 	colSpecInit,
 	defaults,
 	title,
-	forRow,
 	getTableHeightInit,
-	onFilterChange,
 }: {
 	aos: RowType[]
 	colSpecInit: { [key: string]: TableColSpec<RowType> }
 	title: string
 	defaults?: TableColSpec<RowType>
-	forRow?: (row: RowType) => void
 	getTableHeightInit?: () => number
-	onFilterChange?: (filteredData: RowType[]) => void
 }) => {
 	const getTableHeight = getTableHeightInit ?? (() => window.innerHeight - SCROLLBAR_WIDTHS[0])
 
 	const table = createDiv()
 	table.style.maxWidth = "100%"
 	addEl(table, createTableTitle(title, true))
-	DOWNLOAD_CSV[title] = ""
 
 	const colnames = Object.keys(colSpecInit)
-	DOWNLOAD_CSV[title] += colnames.map(x => `"${x}"`).join(",") + "\n"
 
 	// NOTE(sen) Fill in missing spec entries
 	const colSpec: { [key: string]: TableColSpecFinal<RowType> } = {}
@@ -331,81 +325,49 @@ export const createTableFromAos = <RowType extends { [key: string]: any }>({
 		tableWidthPx += colSpec[colname].width
 	}
 
-	if (aos.length > 0) {
-		const hscrollContainer = addDiv(table)
-		hscrollContainer.style.overflowX = "scroll"
-		hscrollContainer.style.boxSizing = "border-box"
-		hscrollContainer.style.borderLeft = "1px solid var(--color-border)"
-		hscrollContainer.style.borderRight = "1px solid var(--color-border)"
+	const hscrollContainer = addDiv(table)
+	hscrollContainer.style.overflowX = "scroll"
+	hscrollContainer.style.boxSizing = "border-box"
+	hscrollContainer.style.borderLeft = "1px solid var(--color-border)"
+	hscrollContainer.style.borderRight = "1px solid var(--color-border)"
 
-		addEl(hscrollContainer, createTableHeaderRow(colSpec))
-		addEl(
-			hscrollContainer,
-			createTableFilterRow(colSpec, (colname: string, filterVal: any) => {
-				colSpec[colname].filterVal = colSpec[colname].filterValProcess(filterVal)
-				aosFiltered = getAosFiltered()
-				virtualizedList.setRowCount(aosFiltered.length)
-			})
-		)
-
-		let tableBodyHeight = getTableBodyHeight(getTableHeight())
-		const tableBodyContainer = addEl(hscrollContainer, createTableBodyContainer(getTableHeight()))
-		tableBodyContainer.style.width = tableWidthPx + "px"
-
-		const getAosFiltered = () => {
-			const aosFiltered: RowType[] = []
-			for (let rowIndex = 0; rowIndex < aos.length; rowIndex += 1) {
-				const rowData = aos[rowIndex]
-
-				let passedColFilters = true
-				for (const otherColname of colnames) {
-					const spec = colSpec[otherColname]
-					passedColFilters = passedColFilters && spec.filter(rowData, spec.filterVal)
-				}
-
-				if (passedColFilters) {
-					aosFiltered.push(rowData)
-				}
-			}
-			onFilterChange?.(aosFiltered)
-			return aosFiltered
-		}
-
-		let aosFiltered = getAosFiltered()
-
-		const virtualizedList = new VirtualizedList(tableBodyContainer, {
-			height: tableBodyHeight,
-			rowCount: aosFiltered.length,
-			renderRow: (rowIndex: number) => {
-				const rowData = aosFiltered[rowIndex]
-				const rowElement = createTableDataRow(rowIndex)
-
-				for (const colname of colnames) {
-					const spec = colSpec[colname]
-					const colData = spec.access(rowData)
-					const colDataFormatted = spec.format(colData)
-					const width = spec.width - SCROLLBAR_WIDTHS[1] / colnames.length
-					addEl(rowElement, createTableCellString(width, colDataFormatted))
-				}
-
-				return rowElement
-			},
-			estimatedRowHeight: TABLE_ROW_HEIGHT_PX,
-			rowHeight: TABLE_ROW_HEIGHT_PX,
+	addEl(hscrollContainer, createTableHeaderRow(colSpec))
+	addEl(
+		hscrollContainer,
+		createTableFilterRow(colSpec, (colname: string, filterVal: any) => {
+			colSpec[colname].filterVal = colSpec[colname].filterValProcess(filterVal)
+			aosFiltered = getAosFiltered()
+			virtualizedList.setRowCount(aosFiltered.length)
+			regenCsv()
 		})
+	)
 
-		const regenBody = () => {
-			const newTableBodyHeight = getTableBodyHeight(getTableHeight())
-			if (newTableBodyHeight != tableBodyHeight) {
-				tableBodyHeight = newTableBodyHeight
-				tableBodyContainer.style.maxHeight = newTableBodyHeight + "px"
-				virtualizedList.resize(newTableBodyHeight)
-			}
-		}
+	let tableBodyHeight = getTableBodyHeight(getTableHeight())
+	const tableBodyContainer = addEl(hscrollContainer, createTableBodyContainer(getTableHeight()))
+	tableBodyContainer.style.width = tableWidthPx + "px"
 
+	const getAosFiltered = () => {
+		const aosFiltered: RowType[] = []
 		for (let rowIndex = 0; rowIndex < aos.length; rowIndex += 1) {
 			const rowData = aos[rowIndex]
 
+			let passedColFilters = true
+			for (const otherColname of colnames) {
+				const spec = colSpec[otherColname]
+				passedColFilters = passedColFilters && spec.filter(rowData, spec.filterVal)
+			}
+
+			if (passedColFilters) {
+				aosFiltered.push(rowData)
+			}
+		}
+		return aosFiltered
+	}
+
+	const regenCsv = () => {
+		DOWNLOAD_CSV[title] = colnames.map((x) => `"${x}"`).join(",") + "\n"
+		for (let rowIndex = 0; rowIndex < aosFiltered.length; rowIndex += 1) {
+			const rowData = aosFiltered[rowIndex]
 			for (let colnameIndex = 0; colnameIndex < colnames.length; colnameIndex++) {
 				const colname = colnames[colnameIndex]
 				const spec = colSpec[colname]
@@ -416,13 +378,44 @@ export const createTableFromAos = <RowType extends { [key: string]: any }>({
 					DOWNLOAD_CSV[title] += ","
 				}
 			}
-
 			DOWNLOAD_CSV[title] += "\n"
-			forRow?.(rowData)
 		}
-
-        globalThis.window.addEventListener("resize", regenBody)
 	}
+
+	let aosFiltered = getAosFiltered()
+	regenCsv()
+
+	const virtualizedList = new VirtualizedList(tableBodyContainer, {
+		height: tableBodyHeight,
+		rowCount: aosFiltered.length,
+		renderRow: (rowIndex: number) => {
+			const rowData = aosFiltered[rowIndex]
+			const rowElement = createTableDataRow(rowIndex)
+
+			for (const colname of colnames) {
+				const spec = colSpec[colname]
+				const colData = spec.access(rowData)
+				const colDataFormatted = spec.format(colData)
+				const width = spec.width - SCROLLBAR_WIDTHS[1] / colnames.length
+				addEl(rowElement, createTableCellString(width, colDataFormatted))
+			}
+
+			return rowElement
+		},
+		estimatedRowHeight: TABLE_ROW_HEIGHT_PX,
+		rowHeight: TABLE_ROW_HEIGHT_PX,
+	})
+
+	const resizeBody = () => {
+		const newTableBodyHeight = getTableBodyHeight(getTableHeight())
+		if (newTableBodyHeight != tableBodyHeight) {
+			tableBodyHeight = newTableBodyHeight
+			tableBodyContainer.style.maxHeight = newTableBodyHeight + "px"
+			virtualizedList.resize(newTableBodyHeight)
+		}
+	}
+
+	globalThis.window.addEventListener("resize", resizeBody)
 
 	return table
 }

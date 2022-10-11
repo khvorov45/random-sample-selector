@@ -123,7 +123,162 @@ export const expandGrid = <T>(input: T[][]): T[][] => {
 }
 
 export const moveToFront = <T>(arr: T[], item: T) => {
-	const result = arr.filter(x => x !== item)
+	const result = arr.filter((x) => x !== item)
 	result.unshift(item)
+	return result
+}
+
+export type SummariseSpec<RowType, CountsType> = {
+	data: RowType[]
+	groups: string[]
+	defaultCounts: CountsType | (() => CountsType)
+	filter?: (row: RowType) => boolean
+	getKey: (row: RowType, key: string) => any
+	addRow: (row: RowType, counts: CountsType) => void
+}
+
+export const summarise = <RowType, CountsType>({
+	data,
+	groups,
+	defaultCounts,
+	filter,
+	getKey,
+	addRow,
+}: SummariseSpec<RowType, CountsType>) => {
+	const getDefaultCounts = () =>
+		typeof defaultCounts === "function" ? (<() => CountsType>defaultCounts)() : { ...defaultCounts }
+	let groupedCounts: any = {}
+	if (groups.length === 0) {
+		groupedCounts = { total: getDefaultCounts() }
+	}
+
+	for (const row of data) {
+		if (filter ? filter(row) : true) {
+			if (groups.length === 0) {
+				addRow(row, groupedCounts.total)
+			}
+
+			let currentGroupCount = groupedCounts
+			for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+				const group = groups[groupIndex]
+				const key = getKey(row, group)
+
+				if (groupIndex == groups.length - 1) {
+					if (currentGroupCount[key] === undefined) {
+						currentGroupCount[key] = getDefaultCounts()
+					}
+					addRow(row, currentGroupCount[key])
+				} else {
+					if (currentGroupCount[key] === undefined) {
+						currentGroupCount[key] = {}
+					}
+					currentGroupCount = currentGroupCount[key]
+				}
+			}
+		}
+	}
+
+	return groupedCounts
+}
+
+export const flattenMap = (map: any, existing: any[]) => {
+	let result: any[] = []
+	const isObject = (val: any) => val && typeof val === "object" && val.constructor === Object
+	for (const key of Object.keys(map)) {
+		const nested = map[key]
+		const newExisting = [...existing]
+		newExisting.push(key)
+		if (isObject(nested) && isObject(Object.values(nested)[0])) {
+			result = result.concat(flattenMap(nested, newExisting))
+		} else {
+			for (const val of Object.values(nested)) {
+				newExisting.push(val)
+			}
+			result.push(newExisting)
+		}
+	}
+	return result
+}
+
+export const arrayToMap = (arr: any[], names: string[]) => {
+	const result: any = {}
+	for (let index = 0; index < arr.length; index += 1) {
+		result[names[index]] = arr[index]
+	}
+	return result
+}
+
+export const aoaToAos = (aoa: any[][], names: string[]) => aoa.map((arr) => arrayToMap(arr, names))
+
+export const summariseAos = <RowType, CountsType extends Record<string, unknown>>(
+	spec: SummariseSpec<RowType, CountsType>,
+	modOnCompletion?: (aosRow: any) => void
+) => {
+	const numberCols: string[] = []
+	for (const group of spec.groups) {
+		for (const dataRow of spec.data) {
+			const dataVal = spec.getKey(dataRow, group)
+			if (dataVal !== null && dataVal !== undefined) {
+				if (typeof dataVal === "number") {
+					numberCols.push(group)
+				}
+				break
+			}
+		}
+	}
+
+	const summaryMap = summarise(spec)
+	const summaryAoa = flattenMap(summaryMap, [])
+
+	const namesStart = [...spec.groups]
+	if (namesStart.length === 0) {
+		namesStart.push("Total")
+	}
+
+	const getDefaultCounts = () =>
+		typeof spec.defaultCounts === "function" ? (<() => CountsType>spec.defaultCounts)() : { ...spec.defaultCounts }
+	let summaryAos = aoaToAos(summaryAoa, namesStart.concat(Object.keys(getDefaultCounts())))
+
+	for (const summaryRow of summaryAos) {
+		for (const numberCol of numberCols) {
+			summaryRow[numberCol] = parseFloat(summaryRow[numberCol])
+		}
+		for (const colname of Object.keys(summaryRow)) {
+			if (summaryRow[colname] === "undefined") {
+				summaryRow[colname] = undefined
+			}
+		}
+	}
+
+	if (modOnCompletion !== undefined) {
+		summaryAos = summaryAos.map((row) => {
+			modOnCompletion(row)
+			return row
+		})
+	}
+
+	return summaryAos
+}
+
+export const seq = (from: number, to: number, by: number) => {
+	const result = <number[]>[]
+	for (let val = from; val < to; val += by) {
+		result.push(val)
+	}
+	return result
+}
+
+export const sample = <T>(arr: T[], nInit: number) => {
+	const sample = [...arr]
+	const length = sample.length
+	const n = Math.max(Math.min(nInit, length), 0)
+	const last = length - 1
+	for (let index = 0; index < n; index++) {
+		const rand = Math.round(Math.random() * (last - index) + index)
+		const temp = sample[index]
+		sample[index] = sample[rand]
+		sample[rand] = temp
+	}
+	const result = sample.slice(0, n)
 	return result
 }
