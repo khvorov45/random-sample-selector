@@ -52,6 +52,8 @@ const main = () => {
 	const onNewDataString = (input: string) => {
 		data = parseData(input)
 		regenTableAndFilterInputs()
+		settingsContainer.style.display = "flex"
+		filePromptContainer.style.display = "none"
 	}
 
 	const regenTableAndFilterInputs = () => {
@@ -182,7 +184,7 @@ const main = () => {
 	const mainEl = document.getElementById("main")!
 	const tableContainer = DOM.addDiv(mainEl)
 	const settingsContainer = DOM.addDiv(mainEl)
-	settingsContainer.style.display = "flex"
+	settingsContainer.style.display = "none"
 	const keepAllContainer = DOM.addDiv(settingsContainer)
 	DOM.addEl(keepAllContainer, DOM.createDivWithText("keepAll"))
 	const keepAllSwitchesContainer = DOM.addDiv(keepAllContainer)
@@ -195,6 +197,14 @@ const main = () => {
 	howManyInput.name = "test"
 	howManyInput.type = "number"
 	howManyInput.oninput = reselectData
+	const filePromptContainer = DOM.addDiv(mainEl)
+	filePromptContainer.style.display = "flex"
+	filePromptContainer.style.justifyContent = "center"
+	filePromptContainer.style.alignItems = "center"
+	filePromptContainer.style.height = "100vh"
+	filePromptContainer.style.fontSize = "xx-large"
+
+	DOM.addEl(filePromptContainer, DOM.createDivWithText("Drag file"))
 
 	if (globalThis.window.location.hostname == "127.0.0.1") {
 		const fetchAndUpdate = async (path: string) => {
