@@ -223,12 +223,17 @@ const main = () => {
 	const totalSelectedContainer = DOM.addDiv(settingsContainer)
 	const filePromptContainer = DOM.addDiv(mainEl)
 	filePromptContainer.style.display = "flex"
+	filePromptContainer.style.flexDirection = "column"
 	filePromptContainer.style.justifyContent = "center"
 	filePromptContainer.style.alignItems = "center"
 	filePromptContainer.style.height = "100vh"
-	filePromptContainer.style.fontSize = "xx-large"
 
-	DOM.addEl(filePromptContainer, DOM.createDivWithText("Drag file"))
+	const dragFile = DOM.addEl(filePromptContainer, DOM.createDivWithText("Drag file"))
+	dragFile.style.fontSize = "xx-large"
+	DOM.addEl(filePromptContainer, DOM.createDivWithText("File format: csv or tsv"))
+	DOM.addEl(filePromptContainer, DOM.createDivWithText("Should contain a 'date' column. 'year' and 'month' will be generated from it"))
+	DOM.addEl(filePromptContainer, DOM.createDivWithText("A column called '_SEL_' is set to 1 for selected rows, 0 otherwise. Put 1 into the filter textbox to only see the selected samples."))
+	DOM.addEl(filePromptContainer, DOM.createDivWithText("Download the table by clicking on the table title bar."))
 
 	const fileInputWholePageClick = DOM.addEl(filePromptContainer, DOM.createEl("input"))
 	fileInputWholePageClick.type = "file"
