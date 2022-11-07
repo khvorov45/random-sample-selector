@@ -19,10 +19,22 @@ const parseData = (input: string): Data => {
 		if (result.data.length > 0) {
 			result.colnames = ["_SEL_"].concat(Object.keys(result.data[0]))
 			for (const colname of result.colnames) {
-				if (colname === "date" && !result.colnames.includes("month")) {
-					result.colnames.push("month")
-					for (const row of result.data) {
-						row.month = new Date(row.date).getMonth().toString()
+				if (colname === "date") {
+					if (!result.colnames.includes("month")) {
+						result.colnames.push("month")
+						for (const row of result.data) {
+							row.month = new Date(row.date).getMonth().toString()
+						}
+					}
+					if (!result.colnames.includes("year")) {
+						result.colnames.push("year")
+						for (const row of result.data) {
+							let year = new Date(row.date).getFullYear()
+							if (isNaN(year)) {
+								year = parseInt(row.date.slice(0, 4))
+							}
+							row.year = year.toString()
+						}
 					}
 				}
 			}
