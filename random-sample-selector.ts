@@ -127,6 +127,8 @@ const main = () => {
 			addRow: (row, count) => count.push(row),
 		})
 
+		let totalSelectedCount = 0
+
 		const select = (from: any) => {
 			if (Array.isArray(from)) {
 				const notKept = <DataRow[]>[]
@@ -144,6 +146,7 @@ const main = () => {
 					if (keepBecauseOfKeepAll) {
 						row._SEL_ = "1"
 						data.data.push(row)
+						totalSelectedCount += 1
 					} else {
 						notKept.push(row)
 					}
@@ -154,7 +157,11 @@ const main = () => {
 				const selectedIndices = Arr.sample(allIndices, selectCount)
 				for (let rowIndex = 0; rowIndex < notKept.length; rowIndex++) {
 					const row = notKept[rowIndex]
-					row._SEL_ = selectedIndices.includes(rowIndex) ? "1" : "0"
+					const sel = selectedIndices.includes(rowIndex)
+					if (sel) {
+						totalSelectedCount += 1
+					}
+					row._SEL_ = sel ? "1" : "0"
 					data.data.push(row)
 				}
 			} else {
@@ -192,6 +199,9 @@ const main = () => {
 				getTableHeightInit: () => window.innerHeight / 2,
 			})
 		)
+
+		DOM.removeChildren(totalSelectedContainer)
+		DOM.addEl(totalSelectedContainer, DOM.createDivWithText(`total selected: ${totalSelectedCount}`))
 	}
 
 	const mainEl = document.getElementById("main")!
@@ -210,6 +220,7 @@ const main = () => {
 	howManyInput.name = "test"
 	howManyInput.type = "number"
 	howManyInput.oninput = reselectData
+	const totalSelectedContainer = DOM.addDiv(settingsContainer)
 	const filePromptContainer = DOM.addDiv(mainEl)
 	filePromptContainer.style.display = "flex"
 	filePromptContainer.style.justifyContent = "center"
